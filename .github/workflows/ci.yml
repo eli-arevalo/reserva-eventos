@@ -45,3 +45,68 @@ jobs:
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/reservaeventos:latest
             ${{ vars.DOCKERHUB_USERNAME }}/reservaeventos:${{ github.sha }}
+
+  deploy:
+    name: Desplegar en EC2
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configurar acceso SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/id_ec2
+          chmod 600 ~/.ssh/id_ec2
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Descargar y desplegar imagen en EC2
+        env:
+          EC2_HOST: ${{ vars.EC2_HOST }}
+          IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/reservaeventos:${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/id_ec2 \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=yes \
+            ec2-user@"$EC2_HOST" bash -s -- "$IMAGE" <<'REMOTE'
+          set -e
+
+          IMAGE="$1"
+
+          echo "Descargando imagen Docker..."
+          docker pull "$IMAGE"
+
+          echo "Actualizando contenedor..."
+          docker stop reservaeventos || true
+          docker rm reservaeventos || true
+
+          docker run -d \
+            --name reservaeventos \
+            --restart unless-stopped \
+            --memory=700m \
+            -e JAVA_TOOL_OPTIONS="-Xmx384m" \
+            --env-file /home/ec2-user/reservaEventos.env \
+            -v /home/ec2-user/oracle-wallet:/opt/oracle/wallet:ro \
+            -p 127.0.0.1:8080:8080 \
+            "$IMAGE"
+
+          echo "Verificando Spring Boot..."
+
+          for intento in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null \
+              http://localhost:8080/api/eventos; then
+              echo "Despliegue exitoso"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "La aplicacion no respondio correctamente"
+          docker logs --tail 50 reservaeventos
+          exit 1
+          REMOTE
