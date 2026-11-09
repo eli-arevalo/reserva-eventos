@@ -1,0 +1,11 @@
+.git
+.github
+.vscode
+.mvn
+src
+*.pem
+*.key
+*.p12
+.env
+Wallet_*
+wallet/
