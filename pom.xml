@@ -95,6 +95,11 @@
 			<artifactId>pdfbox</artifactId>
 			<version>3.0.8</version>
 		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.59.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>

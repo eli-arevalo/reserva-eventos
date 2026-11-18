@@ -28,13 +28,15 @@ public class ReservaServiceImpl implements ReservaService {
     private final EventoRepository eventoRepository;
     private final UsuarioRepository usuarioRepository;
     private final TicketPdfService ticketPdfService;
+    private final S3Service s3Service;
 
 
-    public ReservaServiceImpl(ReservaRepository reservaRepository, EventoRepository eventoRepository, UsuarioRepository usuarioRepository, TicketPdfService ticketPdfService) {
+    public ReservaServiceImpl(ReservaRepository reservaRepository, EventoRepository eventoRepository, UsuarioRepository usuarioRepository, TicketPdfService ticketPdfService, S3Service s3Service) {
         this.reservaRepository = reservaRepository;
         this.eventoRepository = eventoRepository;
         this.usuarioRepository = usuarioRepository;
         this.ticketPdfService = ticketPdfService;
+        this.s3Service = s3Service;
     }
 
     @Override
@@ -130,5 +132,32 @@ public class ReservaServiceImpl implements ReservaService {
                 HttpStatus.NOT_FOUND, "Reserva no encontrada :C"
             ));
         return ticketPdfService.generarPdf(reserva);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void subirPdfS3(Long idreserva) throws IOException{
+
+        byte[] pdf = generarPdf(idreserva);//reutilizamos nuestro metodo, est econsulta la reserva en la bd y genera el pdf mediante ticketpdfService
+
+        s3Service.subirPdf(idreserva, pdf);//luego enviamos el pdf al service s3
+    }
+
+    @Override
+    public byte[] descargarPdfS3(Long IdReserva){
+
+        return s3Service.descargarPdf(IdReserva);//reutilizamos el metodo que creamos en S3Service
+    }
+
+    @Override
+    public void actualizarPdfS3(Long idReserva, byte[] nuevoPdf){
+
+        s3Service.subirPdf(idReserva, nuevoPdf);
+    }
+
+    @Override
+    public void eliminarPdfS3(Long idReserva){
+
+        s3Service.eliminarPdf(idReserva);
     }
 }

@@ -14,4 +14,12 @@ public interface ReservaService {
     Optional<ReservaRespuestaDTO> obtenerReservaPorId(Long id);
 
     byte[] generarPdf(Long idReserva) throws IOException;//el metodo devolverá el cont. binario del pdf
+
+    void subirPdfS3(Long idReserva) throws IOException;
+
+    byte[] descargarPdfS3(Long idReserva);
+
+    void actualizarPdfS3(Long idReserva, byte[] nuevoPdf);
+
+    void eliminarPdfS3(Long idReserva);
 }
