@@ -9,10 +9,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 
 @RestController 
@@ -48,5 +50,18 @@ public class ReservaController {
             return ResponseEntity.notFound().build();
         }
     }
-    
+
+   @GetMapping("/{id}/pdf")
+   public ResponseEntity<byte[]> descargarPdf(@PathVariable Long id) throws IOException {
+
+       byte[] pdf = reservaService.generarPdf(id);
+
+       return ResponseEntity.ok()//devuleve un 200 ok si todo va bien
+            .contentType(MediaType.APPLICATION_PDF)//identifica el contenido como un pdf :O
+            .header//indica que es un archivo descargable y establece su name
+                (HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"resumen-compra" + id + ".pdf\""
+            )
+            .body(pdf);//coloca los bytes del pdf que recibimos del service dentro de la respuesta,
+   }
 }

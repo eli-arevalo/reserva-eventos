@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -34,6 +35,8 @@ public class TicketPdfService {
             Long idReserva = reserva.getIdReserva();
             String nombreEvento = reserva.getEvento().getNombreEvento();
             Integer cantidad = reserva.getCantidadSolicitada();
+            BigDecimal precioUnitario = reserva.getPrecioUnitario();
+            BigDecimal precioTotal = reserva.getPrecioTotal();
 
             DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             String fecha = reserva.getEvento().getFechaEvento().format(formato);
@@ -58,7 +61,12 @@ public class TicketPdfService {
                 contenido.showText("Fecha: " + fecha);
                 contenido.newLine();
                 contenido.showText("Entradas reservadas: " + cantidad);
+                contenido.newLine();
 
+                contenido.showText("Precio Unitario de la Entrada: $" + precioUnitario.toPlainString());
+                contenido.newLine();
+
+                contenido.showText("Precio Total: $" + precioTotal.toPlainString());
                 contenido.endText();
             }
             documento.save(salida);

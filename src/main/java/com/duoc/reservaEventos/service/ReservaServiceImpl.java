@@ -12,10 +12,13 @@ import com.duoc.reservaEventos.repository.EventoRepository;
 import com.duoc.reservaEventos.repository.UsuarioRepository;
 import com.duoc.reservaEventos.entity.Evento;
 import com.duoc.reservaEventos.entity.Usuario;
+import com.duoc.reservaEventos.pdf.TicketPdfService;
 import com.duoc.reservaEventos.entity.Reserva;
 
 import java.util.List;
 import java.util.Optional;
+import java.io.IOException;
+import java.math.BigDecimal;
 
 import org.springframework.stereotype.Service;
 
@@ -24,16 +27,18 @@ public class ReservaServiceImpl implements ReservaService {
     private final ReservaRepository reservaRepository;
     private final EventoRepository eventoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final TicketPdfService ticketPdfService;
 
 
-    public ReservaServiceImpl(ReservaRepository reservaRepository, EventoRepository eventoRepository, UsuarioRepository usuarioRepository) {
+    public ReservaServiceImpl(ReservaRepository reservaRepository, EventoRepository eventoRepository, UsuarioRepository usuarioRepository, TicketPdfService ticketPdfService) {
         this.reservaRepository = reservaRepository;
         this.eventoRepository = eventoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.ticketPdfService = ticketPdfService;
     }
 
     @Override
-    @Transactional(readOnly = true)//esto permite que la consulta con bloqueo, la comprobacion de disp y el guardado de la reserva ocurran dentro de la misma transaccion ;D
+    @Transactional
     public ReservaRespuestaDTO crearReserva(ReservaRegistroDTO reservaDTO) {
     
         //1ero buscamos al user
@@ -56,15 +61,30 @@ public class ReservaServiceImpl implements ReservaService {
             );
         }
 
+        BigDecimal precioUnitario = evento.getPrecioEntrada();
+
+        BigDecimal precioTotal = precioUnitario.multiply(
+            BigDecimal.valueOf(reservaDTO.getCantidadSolicitada())
+        );
+
         //creamos y guardamos la reserva
         Reserva reserva = new Reserva();
         reserva.setUsuario(usuario);
         reserva.setEvento(evento);
         reserva.setCantidadSolicitada(reservaDTO.getCantidadSolicitada());
+        reserva.setPrecioUnitario(precioUnitario);
+        reserva.setPrecioTotal(precioTotal);
 
         //devolvemos respuesta
         Reserva reservaGuardada = reservaRepository.save(reserva);
-        return new ReservaRespuestaDTO(reservaGuardada.getIdReserva(), reservaGuardada.getUsuario().getIdUsuario(), reservaGuardada.getEvento().getIdEvento(), reservaGuardada.getCantidadSolicitada());
+        return new ReservaRespuestaDTO(reservaGuardada.getIdReserva(),
+                                    reservaGuardada.getUsuario().getIdUsuario(),
+                                    reservaGuardada.getEvento().getIdEvento(),
+                                    reservaGuardada.getCantidadSolicitada(),
+                                    reservaGuardada.getEvento().getNombreEvento(),
+                                    reservaGuardada.getPrecioUnitario(),
+                                    reservaGuardada.getPrecioTotal()
+        );
     }
 
     @Override
@@ -76,7 +96,11 @@ public class ReservaServiceImpl implements ReservaService {
                                 reserva.getIdReserva(), 
                                 reserva.getUsuario().getIdUsuario(), 
                                 reserva.getEvento().getIdEvento(), 
-                                reserva.getCantidadSolicitada()
+                                reserva.getCantidadSolicitada(),
+                                reserva.getEvento().getNombreEvento(),
+                                reserva.getPrecioUnitario(),
+                                reserva.getPrecioTotal()
+
                 ))
                 .toList();        
     }
@@ -90,8 +114,21 @@ public class ReservaServiceImpl implements ReservaService {
                             reserva.getIdReserva(), 
                             reserva.getUsuario().getIdUsuario(), 
                             reserva.getEvento().getIdEvento(), 
-                            reserva.getCantidadSolicitada()
+                            reserva.getCantidadSolicitada(),
+                            reserva.getEvento().getNombreEvento(),
+                            reserva.getPrecioUnitario(),
+                            reserva.getPrecioTotal()
             ));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] generarPdf(Long idReserva) throws IOException{
+
+        Reserva reserva = reservaRepository.findById(idReserva)
+            .orElseThrow(()-> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Reserva no encontrada :C"
+            ));
+        return ticketPdfService.generarPdf(reserva);
+    }
 }

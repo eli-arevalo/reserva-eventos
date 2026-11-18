@@ -3,6 +3,7 @@ import com.duoc.reservaEventos.dto.ReservaRespuestaDTO;
 import com.duoc.reservaEventos.dto.ReservaRegistroDTO;
 
 import java.util.Optional;
+import java.io.IOException;
 import java.util.List;
 
 public interface ReservaService {
@@ -11,4 +12,6 @@ public interface ReservaService {
     List<ReservaRespuestaDTO> listarReservas();
 
     Optional<ReservaRespuestaDTO> obtenerReservaPorId(Long id);
+
+    byte[] generarPdf(Long idReserva) throws IOException;//el metodo devolverá el cont. binario del pdf
 }
