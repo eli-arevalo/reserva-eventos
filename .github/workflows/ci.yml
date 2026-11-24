@@ -94,7 +94,7 @@ jobs:
             -v /home/ec2-user/oracle-wallet:/opt/oracle/wallet:ro \
             -v /home/ec2-user/.aws/credentials:/opt/aws/credentials:ro \
             -e AWS_SHARED_CREDENTIALS_FILE=/opt/aws/credentials \
-            -p 127.0.0.1:8080:8080 \
+            -p 8080:8080 \
             "$IMAGE"
 
           echo "Verificando Spring Boot..."
